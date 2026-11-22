@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://r00tb3.github.io/breakpoint/sitemap.xml
