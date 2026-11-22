@@ -21,12 +21,14 @@ PALETTES = {
     "dark": dict(
         bg=(10, 10, 10), ink=(234, 234, 234), mute=(138, 138, 138),
         dim=(96, 96, 96), red=(230, 25, 25), line=(42, 42, 42),
-        band=(34, 34, 34), label=(196, 196, 192),
+        band=(38, 38, 38), redband=(48, 22, 22), overlap=(78, 24, 24),
+        label=(196, 196, 192),
     ),
     "light": dict(
         bg=(244, 244, 240), ink=(10, 10, 10), mute=(95, 95, 92),
         dim=(140, 140, 136), red=(196, 20, 20), line=(210, 208, 202),
-        band=(229, 228, 222), label=(52, 52, 50),
+        band=(228, 227, 221), redband=(246, 226, 224), overlap=(238, 190, 186),
+        label=(52, 52, 50),
     ),
 }
 
@@ -35,7 +37,6 @@ CLEAN_LO, CLEAN_HI = 20.4, 84.7
 CLEAN_MEAN = 42.6
 PAYLOADS = [("bias", 77.2, True), ("injection", 96.8, False), ("leakage", 115.8, False)]
 SCALE_MAX = 130.0
-
 
 def font(name, size):
     return ImageFont.truetype(str(FDIR / name), max(1, int(round(size))))
@@ -62,95 +63,105 @@ def render(w, h, palette, s, compact=False):
 
     # ── header, top-anchored ──
     y = pad
-    d.text((pad, y), "PERPLEXITY vs CLEAN CORPUS", font=f_lab, fill=c["label"])
-    y += text_h(d, "PERPLEXITY", f_lab) + int(7 * s)
+    d.text((pad, y), "GPT-2 PERPLEXITY, CLEAN vs POISONED", font=f_lab, fill=c["label"])
+    y += text_h(d, "GPT-2", f_lab) + int(7 * s)
     if compact:
         d.text((pad, y), "15 clean docs · 3 payloads", font=f_small, fill=c["dim"])
         head_bottom = y + text_h(d, "15", f_small)
     else:
-        d.text((pad, y), "GPT-2 · 15 clean documents · 3 payloads", font=f_small, fill=c["dim"])
-        y += text_h(d, "GPT-2", f_small) + int(14 * s)
-
-        # legend row, so the plot itself carries no floating labels
-        lh = text_h(d, "x", f_small)
-        sw = int(11 * s)
-        d.rectangle([pad, y + lh // 2 - int(2 * s), pad + sw, y + lh // 2 + int(2 * s)],
-                    fill=c["band"], outline=c["line"], width=max(1, int(s)))
-        d.text((pad + sw + int(7 * s), y), "clean range 20–85", font=f_small, fill=c["mute"])
-        lx2 = pad + sw + int(7 * s) + d.textlength("clean range 20–85", font=f_small) + int(18 * s)
-        d.line([lx2, y, lx2, y + lh], fill=c["dim"], width=max(1, int(s)))
-        d.text((lx2 + int(7 * s), y), "mean 42.6", font=f_small, fill=c["dim"])
-        head_bottom = y + lh
+        d.text((pad, y), "the clean and poisoned ranges share an interval", font=f_small, fill=c["dim"])
+        head_bottom = y + text_h(d, "the", f_small)
 
     # ── caption, bottom-anchored ──
-    cap2 = "no threshold admits every clean doc and rejects it"
+    cap2 = ("77.2 – 84.7 is shared by both" if compact
+            else "no threshold admits every clean doc and rejects every payload")
     cap1_h = text_h(d, "bias", f_big)
     cap2_h = text_h(d, "bias", f_small)
     cap_y = h - pad - cap1_h - int(9 * s) - cap2_h
-    d.text((pad, cap_y), "bias sits inside the clean range", font=f_big, fill=c["ink"])
+    d.text((pad, cap_y), "the two ranges overlap", font=f_big, fill=c["ink"])
     d.text((pad, cap_y + cap1_h + int(9 * s)), cap2, font=f_small, fill=c["mute"])
 
-    # ── plot, fills the gap ──
-    top = head_bottom + int(30 * s)
-    axis_y = cap_y - int(30 * s)
+    # ── plot: two distributions, with the shared interval shaded ──
     x0, x1 = pad, w - pad
     span = x1 - x0
 
     def X(v):
         return x0 + (min(v, SCALE_MAX) / SCALE_MAX) * span
 
-    # clean range band — labelled in the legend, so the plot stays clean
-    d.rectangle([X(CLEAN_LO), top, X(CLEAN_HI), axis_y], fill=c["band"])
-    for v in (CLEAN_LO, CLEAN_HI):
-        d.line([X(v), top, X(v), axis_y], fill=c["line"], width=max(1, int(s)))
+    lbl_h = text_h(d, "x", f_small)
+    row_h = int((26 if compact else 20) * s)
+    gap = int((52 if compact else 48) * s)
 
-    # mean marker
+    # reserve the bottom first: ticks, then caption
+    tick_y = cap_y - int(30 * s)
+    plot_bottom = tick_y - int(26 * s)
+    plot_top = head_bottom + int(18 * s)
+
+    # two rows, vertically centred in the available space
+    block = row_h * 2 + gap
+    clean_top = plot_top + max(0, (plot_bottom - plot_top - block) // 2)
+    poison_top = clean_top + row_h + gap
+
+    ov_lo = max(CLEAN_LO, min(v for _, v, _ in PAYLOADS))
+    ov_hi = min(CLEAN_HI, max(v for _, v, _ in PAYLOADS))
+    p_lo = min(v for _, v, _ in PAYLOADS)
+    p_hi = max(v for _, v, _ in PAYLOADS)
+
+    # overlap boundary lines, drawn behind everything so they read as guides
+    for v in (ov_lo, ov_hi):
+        x = X(v)
+        y = clean_top - int(4 * s)
+        while y < poison_top + row_h + int(4 * s):
+            d.line([x, y, x, min(y + int(5 * s), poison_top + row_h + int(4 * s))],
+                   fill=c["red"], width=max(1, int(s)))
+            y += int(10 * s)
+    # clean band
+    d.rectangle([X(CLEAN_LO), clean_top, X(CLEAN_HI), clean_top + row_h], fill=c["band"])
+    d.rectangle([X(CLEAN_LO), clean_top, X(CLEAN_HI), clean_top + row_h],
+                outline=c["line"], width=max(1, int(s)))
+
+    # poisoned band
+    d.rectangle([X(p_lo), poison_top, X(p_hi), poison_top + row_h], fill=c["redband"])
+    d.rectangle([X(p_lo), poison_top, X(p_hi), poison_top + row_h],
+                outline=c["red"], width=max(1, int(s)))
+
+    # row labels, above their bar, at the plot's left edge
+    d.text((x0, clean_top - lbl_h - int(7 * s)), "clean corpus  20.4 – 84.7",
+           font=f_small, fill=c["mute"])
+    d.text((x0, poison_top - lbl_h - int(7 * s)), "poisoned payloads  77.2 – 115.8",
+           font=f_small, fill=c["red"])
+
+    # mean marker through the clean band
     mx = X(CLEAN_MEAN)
-    d.line([mx, top, mx, axis_y], fill=c["dim"], width=max(1, int(s)))
+    d.line([mx, clean_top - int(3 * s), mx, clean_top + row_h + int(3 * s)],
+           fill=c["dim"], width=max(1, int(s)))
+
+    # payload positions marked on the poison band
+    for name, val, highlight in PAYLOADS:
+        px = X(val)
+        d.line([px, poison_top - int(4 * s), px, poison_top + row_h + int(4 * s)],
+               fill=c["red"] if highlight else c["dim"], width=max(1, int(s)))
 
     # baseline + ticks
-    d.line([x0, axis_y, x1, axis_y], fill=c["line"], width=max(1, int(s)))
+    d.line([x0, tick_y, x1, tick_y], fill=c["line"], width=max(1, int(s)))
     for v in (0, 40, 80, 120):
         tx = X(v)
-        d.line([tx, axis_y, tx, axis_y + int(5 * s)], fill=c["line"], width=max(1, int(s)))
+        d.line([tx, tick_y, tx, tick_y + int(4 * s)], fill=c["line"], width=max(1, int(s)))
         tw = d.textlength(str(v), font=f_small)
-        d.text((min(tx - tw / 2, x1 - tw), axis_y + int(11 * s)),
+        d.text((min(tx - tw / 2, x1 - tw), tick_y + int(8 * s)),
                str(v), font=f_small, fill=c["dim"])
 
-    # payload stems — labels stack into rows when they would collide
-    lh_s = text_h(d, "x", f_small)
-    row_y = {}
-    for name, val, highlight in PAYLOADS:
-        col = c["red"] if highlight else c["mute"]
-        x = X(val)
-        stem_top = top + int(26 * s)
-        d.line([x, stem_top, x, axis_y], fill=col, width=max(2, int(2 * s)))
-        cap = int(4 * s)
-        d.rectangle([x - cap, stem_top - cap, x + cap, stem_top + cap], fill=col)
-
-        tw = d.textlength(name, font=f_small)
-        lx = min(max(x - tw / 2, pad), x1 - tw)
-        # find the first row where this label clears every label already placed
-        row = 0
-        while True:
-            clash = False
-            for (olx, otw), orow in row_y.items():
-                if orow == row and lx < olx + otw + int(10 * s) and olx < lx + tw + int(10 * s):
-                    clash = True
-                    break
-            if not clash:
-                break
-            row += 1
-        row_y[(lx, tw)] = row
-        d.text((lx, stem_top - cap - lh_s - int(7 * s) - row * (lh_s + int(4 * s))),
-               name, font=f_small, fill=col)
+    # the overlap interval, labelled in the gap at the plot's left edge
+    ov_lbl = f"overlap {ov_lo:.1f}–{ov_hi:.1f}"
+    d.text((x0, clean_top + row_h + int(15 * s)), ov_lbl, font=f_small, fill=c["red"])
 
     return img
 
 
 for theme in ("dark", "light"):
-    hero = render(534, 404, theme, 1.42, compact=True)
+    # The post renders the hero in a 500px slot, so render at 2x for sharpness.
+    hero = render(1068, 808, theme, 2.84, compact=True)
     hero.save(OUT / ("hero.png" if theme == "dark" else "hero-light.png"))
     card = render(1200, 630, theme, 2.2)
     card.save(OUT / ("card.png" if theme == "dark" else "card-light.png"))
-    print(f"{theme}: hero 534x404, card 1200x630")
+    print(f"{theme}: hero 1068x808, card 1200x630")
