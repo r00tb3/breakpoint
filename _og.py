@@ -6,12 +6,14 @@ station. Each arrow now carries its SIP message above it.
 from PIL import Image, ImageDraw, ImageFont
 import math
 import os
+from pathlib import Path
 
 W, H = 1200, 630
 # phone + arrows + tower, without the title block
 CROP = (606, 112, 1140, 516)
-FDIR = "/mnt/f/ai/Projects/blog/fonts"
-OUTDIR = "/mnt/f/ai/Projects/blog/cve-2023-24033"
+ROOT = Path(__file__).parent
+FDIR = str(ROOT / "fonts")
+OUTDIR = str(ROOT / "cve-2023-24033")
 
 PALETTES = {
     "dark": dict(

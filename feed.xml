@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+     xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Breakpoint</title>
+    <link>https://breakpoint.cx/</link>
+    <description>Notes by Amit Vitekar on modem firmware, telecom networks, and machine-learning security.</description>
+    <language>en</language>
+    <copyright>© 2026 Amit Vitekar</copyright>
+    <lastBuildDate>Tue, 24 Nov 2026 12:00:00 +0000</lastBuildDate>
+    <atom:link href="https://breakpoint.cx/feed.xml" rel="self" type="application/rss+xml"/>
+
+    <item>
+      <title>Nine of Ten: measuring three defences in a RAG poisoning lab</title>
+      <link>https://breakpoint.cx/rag-poisoning/</link>
+      <guid isPermaLink="true">https://breakpoint.cx/rag-poisoning/</guid>
+      <pubDate>Wed, 14 Oct 2026 00:00:00 +0000</pubDate>
+      <category>AI Security</category>
+      <description>A keyword filter, a perplexity score and an embedding-similarity check, measured against a RAG poisoning lab's own payloads. The filter rejects nine of ten clean documents; the check that works is imported by nothing.</description>
+    </item>
+
+    <item>
+      <title>The Eleventh Slot: an IMS SDP heap overflow in Exynos modem firmware</title>
+      <link>https://breakpoint.cx/cve-2023-24033/</link>
+      <guid isPermaLink="true">https://breakpoint.cx/cve-2023-24033/</guid>
+      <pubDate>Wed, 12 Aug 2026 00:00:00 +0000</pubDate>
+      <category>Baseband</category>
+      <description>An IMS SDP heap overflow in Exynos modem firmware: locating the parser, reconstructing the dispatch chain, and reproducing the overflow from the real IMS entry point under full-system emulation.</description>
+    </item>
+  </channel>
+</rss>
