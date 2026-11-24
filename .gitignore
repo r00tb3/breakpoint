@@ -1,2 +1,5 @@
 .DS_Store
 __pycache__/
+
+# Research handoff. Drafts live in the shared tree but must never be published.
+drafts/
